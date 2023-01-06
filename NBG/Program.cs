@@ -162,7 +162,7 @@ namespace NBG
 
                             if (item.Contains("Currency"))
                             {
-
+                               
 
                                 string query = "Insert Into [" + item+  "] ([Currency Code], [Starting Date], [Exchange Rate Amount]," +
                                     "[Adjustment Exch_ Rate Amount], [Relational Currency Code], [Relational Exch_ Rate Amount]," +
@@ -174,26 +174,47 @@ namespace NBG
 
                                 // instance connection and command
                                 using (SqlConnection cn = new SqlConnection(_connectionString))
-                                using (SqlCommand cmd = new SqlCommand(query, cn))
                                 {
-                                    // add parameters and their values
-                                    cmd.Parameters.Add("@dbName", System.Data.SqlDbType.NVarChar, 100).Value = item;
-                                    cmd.Parameters.Add("@CurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = currency.code;
-                                    cmd.Parameters.Add("@StartingDate", System.Data.SqlDbType.DateTime, 100).Value = currentDate;
-                                    cmd.Parameters.Add("@ExchangeRateAmount", System.Data.SqlDbType.NVarChar, 100).Value = "1";
-                                    cmd.Parameters.Add("@AdjustmentExchRateAmount", System.Data.SqlDbType.NVarChar, 100).Value = "1";
-                                    cmd.Parameters.Add("@RelationalCurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = "GEL1";
-                                    cmd.Parameters.Add("@RelationalExchRateAmount", System.Data.SqlDbType.Decimal).Value = (decimal)currency.rate;
-                                    cmd.Parameters.Add("@FixExchangeRateAmount", System.Data.SqlDbType.Int).Value = 0;
-                                    cmd.Parameters.Add("@RelationalAdjmtExchRateAmt", System.Data.SqlDbType.Decimal).Value = (decimal)currency.rate;
-                                    cmd.Parameters.Add("@SystemCreatedAt", System.Data.SqlDbType.DateTime).Value = currentDate;
-                                    cmd.Parameters.Add("@SystemModifiedAt", System.Data.SqlDbType.DateTime).Value = currentDate;
-
-                                    // open connection, execute command and close connection
                                     cn.Open();
-                                    cmd.ExecuteNonQuery();
+                                    SqlCommand check_record = new SqlCommand("SELECT COUNT(*) FROM [" + item + "] " +
+                                   "WHERE convert(date,[Starting Date],102) = convert(date,@startingDate,102)" +
+                                   " and [Currency Code] = '" + currency.code+ "' ", cn);
+                                    check_record.Parameters.AddWithValue("@startingDate", currentDate);
+                                    int UserExist = (int)check_record.ExecuteScalar();
+
+                                    if (UserExist > 0)
+                                    {
+                                        //Username exist
+                                    }
+                                    else
+                                    {
+                                        //Username doesn't exist.
+                                        using (SqlCommand cmd = new SqlCommand(query, cn))
+                                        {
+                                            // add parameters and their values
+                                            cmd.Parameters.Add("@dbName", System.Data.SqlDbType.NVarChar, 100).Value = item;
+                                            cmd.Parameters.Add("@CurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = currency.code;
+                                            cmd.Parameters.Add("@StartingDate", System.Data.SqlDbType.DateTime, 100).Value = currentDate;
+                                            cmd.Parameters.Add("@ExchangeRateAmount", System.Data.SqlDbType.NVarChar, 100).Value = "1";
+                                            cmd.Parameters.Add("@AdjustmentExchRateAmount", System.Data.SqlDbType.NVarChar, 100).Value = "1";
+                                            cmd.Parameters.Add("@RelationalCurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = "GEL1";
+                                            cmd.Parameters.Add("@RelationalExchRateAmount", System.Data.SqlDbType.Decimal).Value = (decimal)currency.rate;
+                                            cmd.Parameters.Add("@FixExchangeRateAmount", System.Data.SqlDbType.Int).Value = 0;
+                                            cmd.Parameters.Add("@RelationalAdjmtExchRateAmt", System.Data.SqlDbType.Decimal).Value = (decimal)currency.rate;
+                                            cmd.Parameters.Add("@SystemCreatedAt", System.Data.SqlDbType.DateTime).Value = currentDate;
+                                            cmd.Parameters.Add("@SystemModifiedAt", System.Data.SqlDbType.DateTime).Value = currentDate;
+
+                                            // open connection, execute command and close connection
+
+                                            cmd.ExecuteNonQuery();
+                                           
+                                        }
+                                    }
                                     cn.Close();
+
+
                                 }
+                               
 
                             }
                             else
