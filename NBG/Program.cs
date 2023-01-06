@@ -10,6 +10,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
+//optionsBuilder.UseSqlServer("Server=AZENAISHVILI1;database=811;Trusted_Connection=True;User ID=nbguser;Password=NewPass2;");
+
 namespace NBG
 {
     public class Currency
@@ -81,6 +83,7 @@ namespace NBG
             }
             catch (Exception e)
             {
+                Console.WriteLine("ExceptionExceptionException.");
                 using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(@"D:\logs\ExtRatesLogs.txt", true))
                 {
@@ -96,6 +99,7 @@ namespace NBG
                 file.WriteLine(DateTime.Now + " Finish process");
             }
             Console.WriteLine("Finish Process.");
+            Console.ReadKey();
         }
 
         static async Task<List<NBGService>> GetCurrencyAsync()
@@ -158,35 +162,37 @@ namespace NBG
 
                             if (item.Contains("Currency"))
                             {
-                                var rateNL = new NlCeOct19CurrencyExchangeRate437dbf0e84ff417a965dEd2bb9650972()
+
+
+                                string query = "Insert Into [" + item+  "] ([Currency Code], [Starting Date], [Exchange Rate Amount]," +
+                                    "[Adjustment Exch_ Rate Amount], [Relational Currency Code], [Relational Exch_ Rate Amount]," +
+                                    "[Fix Exchange Rate Amount]," +
+                                    "[Relational Adjmt Exch Rate Amt],[$systemCreatedAt],[$systemModifiedAt]) " +
+                   "VALUES (@CurrencyCode, @StartingDate, @ExchangeRateAmount, @AdjustmentExchRateAmount," +
+                   " @RelationalCurrencyCode, @RelationalExchRateAmount, @FixExchangeRateAmount," +
+                   "@RelationalAdjmtExchRateAmt,@SystemCreatedAt, @SystemModifiedAt) ";
+
+                                // instance connection and command
+                                using (SqlConnection cn = new SqlConnection(_connectionString))
+                                using (SqlCommand cmd = new SqlCommand(query, cn))
                                 {
-                                    CurrencyCode = currency.code,
-                                    StartingDate = currentDate,
-                                    ExchangeRateAmount = 1,
-                                    AdjustmentExchRateAmount = 1,
-                                    RelationalCurrencyCode = "GEL1",
-                                    RelationalExchRateAmount = (decimal)currency.rate,
-                                    FixExchangeRateAmount = 0,
-                                    RelationalAdjmtExchRateAmt = (decimal)currency.rate,
-                                    SystemCreatedAt = currentDate,
-                                    SystemModifiedAt = currentDate,
+                                    // add parameters and their values
+                                    cmd.Parameters.Add("@dbName", System.Data.SqlDbType.NVarChar, 100).Value = item;
+                                    cmd.Parameters.Add("@CurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = currency.code;
+                                    cmd.Parameters.Add("@StartingDate", System.Data.SqlDbType.DateTime, 100).Value = currentDate;
+                                    cmd.Parameters.Add("@ExchangeRateAmount", System.Data.SqlDbType.NVarChar, 100).Value = "1";
+                                    cmd.Parameters.Add("@AdjustmentExchRateAmount", System.Data.SqlDbType.NVarChar, 100).Value = "1";
+                                    cmd.Parameters.Add("@RelationalCurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = "GEL1";
+                                    cmd.Parameters.Add("@RelationalExchRateAmount", System.Data.SqlDbType.Decimal).Value = (decimal)currency.rate;
+                                    cmd.Parameters.Add("@FixExchangeRateAmount", System.Data.SqlDbType.Int).Value = 0;
+                                    cmd.Parameters.Add("@RelationalAdjmtExchRateAmt", System.Data.SqlDbType.Decimal).Value = (decimal)currency.rate;
+                                    cmd.Parameters.Add("@SystemCreatedAt", System.Data.SqlDbType.DateTime).Value = currentDate;
+                                    cmd.Parameters.Add("@SystemModifiedAt", System.Data.SqlDbType.DateTime).Value = currentDate;
 
-                                };
-
-                                if (DBConfig.Currencies.Contains(currency.code))
-                                {
-                                    var exist = db.NlCeOct19CurrencyExchangeRate437dbf0e84ff417a965dEd2bb9650972s
-                                                        .FirstOrDefault(x => (x.CurrencyCode == rateNL.CurrencyCode &&
-                                                            x.StartingDate.Day == rateNL.StartingDate.Day &&
-                                                             x.StartingDate.Month == rateNL.StartingDate.Month &&
-                                                             x.StartingDate.Year == rateNL.StartingDate.Year));
-
-                                    if (exist == null)
-                                    {
-
-                                        db.NlCeOct19CurrencyExchangeRate437dbf0e84ff417a965dEd2bb9650972s.Add(rateNL);
-                                    }
-
+                                    // open connection, execute command and close connection
+                                    cn.Open();
+                                    cmd.ExecuteNonQuery();
+                                    cn.Close();
                                 }
 
                             }
