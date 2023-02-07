@@ -58,19 +58,24 @@ namespace NBG
         private static IConfiguration _iconfiguration;
 
 
+
         static async Task Main(string[] args)
         {
+
             var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false);
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json");
 
             IConfiguration config = builder.Build();
 
             var dbConfig = config.GetSection("DBConfig").Get<DBConfig>();
             //var mySecondClass = config.GetSection("MySecondClass").Get<MySecondClass>();
 
+            string Log_File = dbConfig.LogPath;
+
+
             using (System.IO.StreamWriter file =
-            new System.IO.StreamWriter(@"D:\logs\ExtRatesLogs.txt", true))
+            new System.IO.StreamWriter(Log_File, true))
             {
                 file.WriteLine(DateTime.Now + " Start process");
             }
@@ -85,7 +90,7 @@ namespace NBG
             {
                 Console.WriteLine("ExceptionExceptionException.");
                 using (System.IO.StreamWriter file =
-                new System.IO.StreamWriter(@"D:\logs\ExtRatesLogs.txt", true))
+                new System.IO.StreamWriter(Log_File, true))
                 {
                     file.WriteLine(" ! ! !  ERROR ! ! !  " + DateTime.Now + " " + e.Message);
                 }
@@ -94,12 +99,11 @@ namespace NBG
 
 
             using (System.IO.StreamWriter file =
-                    new System.IO.StreamWriter(@"D:\logs\ExtRatesLogs.txt", true))
+                    new System.IO.StreamWriter(Log_File, true))
             {
                 file.WriteLine(DateTime.Now + " Finish process");
             }
             Console.WriteLine("Finish Process.");
-            Console.ReadKey();
         }
 
         static async Task<List<NBGService>> GetCurrencyAsync()
@@ -151,7 +155,10 @@ namespace NBG
                 currentDate.Month,
                 currentDate.Day,
                 0, 0, 0);
-            using (NBGContext db = new NBGContext())
+
+            var RelationalCurrencyCode = DBConfig.TableValues.RelationalCurrencyCode;
+
+            using (NBGContext db = new NBGContext(_connectionString))
             {
                 foreach (var item in DBConfig.Tables)
                 {
@@ -162,9 +169,9 @@ namespace NBG
 
                             if (item.Contains("Currency"))
                             {
-                               
 
-                                string query = "Insert Into [" + item+  "] ([Currency Code], [Starting Date], [Exchange Rate Amount]," +
+
+                                string query = "Insert Into [" + item + "] ([Currency Code], [Starting Date], [Exchange Rate Amount]," +
                                     "[Adjustment Exch_ Rate Amount], [Relational Currency Code], [Relational Exch_ Rate Amount]," +
                                     "[Fix Exchange Rate Amount]," +
                                     "[Relational Adjmt Exch Rate Amt],[$systemCreatedAt],[$systemModifiedAt]) " +
@@ -178,8 +185,8 @@ namespace NBG
                                     cn.Open();
                                     SqlCommand check_record = new SqlCommand("SELECT COUNT(*) FROM [" + item + "] " +
                                    "WHERE convert(date,[Starting Date],102) = convert(date,@startingDate,102)" +
-                                   " and [Currency Code] = '" + currency.code+ "' ", cn);
-                                    check_record.Parameters.AddWithValue("@startingDate", currentDate);
+                                   " and [Currency Code] = '" + currency.code + "' ", cn);
+                                    check_record.Parameters.AddWithValue("@startingDate", dt);
                                     int UserExist = (int)check_record.ExecuteScalar();
 
                                     if (UserExist > 0)
@@ -194,27 +201,27 @@ namespace NBG
                                             // add parameters and their values
                                             cmd.Parameters.Add("@dbName", System.Data.SqlDbType.NVarChar, 100).Value = item;
                                             cmd.Parameters.Add("@CurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = currency.code;
-                                            cmd.Parameters.Add("@StartingDate", System.Data.SqlDbType.DateTime, 100).Value = currentDate;
+                                            cmd.Parameters.Add("@StartingDate", System.Data.SqlDbType.DateTime, 100).Value = dt;
                                             cmd.Parameters.Add("@ExchangeRateAmount", System.Data.SqlDbType.NVarChar, 100).Value = "1";
                                             cmd.Parameters.Add("@AdjustmentExchRateAmount", System.Data.SqlDbType.NVarChar, 100).Value = "1";
-                                            cmd.Parameters.Add("@RelationalCurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = "GEL1";
+                                            cmd.Parameters.Add("@RelationalCurrencyCode", System.Data.SqlDbType.NVarChar, 100).Value = RelationalCurrencyCode;
                                             cmd.Parameters.Add("@RelationalExchRateAmount", System.Data.SqlDbType.Decimal).Value = (decimal)currency.rate;
                                             cmd.Parameters.Add("@FixExchangeRateAmount", System.Data.SqlDbType.Int).Value = 0;
                                             cmd.Parameters.Add("@RelationalAdjmtExchRateAmt", System.Data.SqlDbType.Decimal).Value = (decimal)currency.rate;
-                                            cmd.Parameters.Add("@SystemCreatedAt", System.Data.SqlDbType.DateTime).Value = currentDate;
-                                            cmd.Parameters.Add("@SystemModifiedAt", System.Data.SqlDbType.DateTime).Value = currentDate;
+                                            cmd.Parameters.Add("@SystemCreatedAt", System.Data.SqlDbType.DateTime).Value = dt;
+                                            cmd.Parameters.Add("@SystemModifiedAt", System.Data.SqlDbType.DateTime).Value = dt;
 
                                             // open connection, execute command and close connection
 
                                             cmd.ExecuteNonQuery();
-                                           
+
                                         }
                                     }
                                     cn.Close();
 
 
                                 }
-                               
+
 
                             }
                             else
@@ -278,8 +285,14 @@ namespace NBG
         public List<string> Databases { get; set; }
         public List<string> Tables { get; set; }
         public List<string> Currencies { get; set; }
+        public TableValues TableValues { get; set; }
+        public string LogPath { get; set; }
     }
 
+    public class TableValues
+    {
+        public string RelationalCurrencyCode { get; set; }
+    }
     public class MySecondClass
     {
         public string SettingOne { get; set; }
